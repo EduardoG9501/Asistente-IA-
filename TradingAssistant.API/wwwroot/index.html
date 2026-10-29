@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Asistente de Trading</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0F172A',
+                        darkcard: '#1E293B',
+                        darkaccent: '#334155'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos personalizados para el scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0F172A;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-darkbg text-gray-100 min-h-screen font-sans">
+
+    <!-- Navbar -->
+    <header class="bg-darkcard border-b border-gray-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <!-- Icono de trading -->
+                <svg class="h-8 w-8 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">
+                    TradingAssistant <span class="text-sm font-semibold text-gray-500">v1.0 (MVP)</span>
+                </h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
+                    <span class="w-2 h-2 mr-1.5 bg-green-400 rounded-full animate-ping"></span>
+                    API Activa
+                </span>
+                <span id="bot-status-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20">
+                    Cargando Bot...
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Notificaciones Toast -->
+        <div id="toast" class="fixed bottom-5 right-5 bg-indigo-600 text-white px-4 py-3 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center space-x-2">
+            <span id="toast-message">Guardado con éxito</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Columna Izquierda: Configuración -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Card: Ajustes -->
+                <div class="bg-darkcard border border-gray-800 rounded-xl p-6 shadow-xl">
+                    <h2 class="text-lg font-semibold mb-4 text-gray-200 border-b border-gray-800 pb-2 flex items-center">
+                        <svg class="h-5 w-5 mr-2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                        Gestión de Riesgo
+                    </h2>
+                    
+                    <form id="settings-form" class="space-y-4" onsubmit="saveSettings(event)">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Capital de Cuenta (USD)</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 font-medium">$</span>
+                                <input type="number" step="0.01" id="capital" required class="bg-darkbg border border-gray-800 rounded-lg w-full pl-7 pr-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Riesgo Máximo por Trade</label>
+                            <div class="relative">
+                                <input type="number" step="0.1" id="max-risk" required class="bg-darkbg border border-gray-800 rounded-lg w-full px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 font-medium">%</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Telegram Chat ID</label>
+                            <input type="text" id="telegram-chat-id" placeholder="Ej: 12345678" class="bg-darkbg border border-gray-800 rounded-lg w-full px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Modo de Operación</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" id="btn-mode-safe" onclick="setRiskMode(0)" class="py-2 px-3 rounded-lg text-xs font-bold border transition duration-200 flex items-center justify-center space-x-1 border-indigo-500 bg-indigo-600/20 text-indigo-300">
+                                    <span>🛡️ Seguro</span>
+                                </button>
+                                <button type="button" id="btn-mode-aggressive" onclick="setRiskMode(1)" class="py-2 px-3 rounded-lg text-xs font-bold border transition duration-200 flex items-center justify-center space-x-1 border-gray-800 bg-darkbg text-gray-400">
+                                    <span>⚡ Agresivo</span>
+                                </button>
+                            </div>
+                            <p id="mode-desc-text" class="text-[11px] text-gray-500 mt-1">Filtros estrictos (alta precisión, menos señales).</p>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-sm text-gray-300">Bot Auto-Monitoreo</span>
+                            <button type="button" id="btn-toggle-bot" onclick="toggleBotEnabled()" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-700">
+                                <span class="sr-only">Habilitar Bot</span>
+                                <span id="toggle-circle" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-0"></span>
+                            </button>
+                        </div>
+
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                            Guardar Cambios
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Acciones y Resultados (Dividido en 2 Pantallas/Pestañas) -->
+            <div class="lg:col-span-3 space-y-6">
+
+                <!-- Navegación por Pestañas -->
+                <div class="flex border-b border-gray-800 space-x-2 bg-darkcard p-1.5 rounded-xl border border-gray-800">
+                    <button id="tab-btn-auto" onclick="switchTab('auto')" class="flex-1 py-2.5 px-4 font-bold text-xs rounded-lg transition duration-200 flex items-center justify-center space-x-2 bg-indigo-600/20 text-indigo-300 border border-indigo-500/40">
+                        <svg class="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        <span>🤖 Pantalla 1: Bot Auto-Monitoreo (Alertas 24/7)</span>
+                    </button>
+                    <button id="tab-btn-manual" onclick="switchTab('manual')" class="flex-1 py-2.5 px-4 font-bold text-xs rounded-lg transition duration-200 flex items-center justify-center space-x-2 bg-darkbg text-gray-400 border border-gray-800 hover:text-gray-200">
+                        <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <span>🔍 Pantalla 2: Escáner Manual Bajo Demanda</span>
+                    </button>
+                </div>
+
+                <!-- PESTAÑA 1: BOT AUTO-MONITOREO -->
+                <div id="tab-content-auto" class="space-y-6">
+                    <!-- Banner Informativo del Bot -->
+                    <div class="bg-darkcard border border-gray-800 rounded-xl p-5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <h3 class="font-bold text-gray-200 text-sm">Monitoreo Automático Multiactivo (24/7)</h3>
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">5 Activos en Vivo</span>
+                            </div>
+                            <p class="text-xs text-gray-400">Escaneando continuamente: <span class="font-mono text-gray-300 font-semibold">EUR/USD, GBP/USD, USD/JPY, AUD/USD, USD/CAD</span> (Cada 60s).</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs text-gray-400">Estado Bot:</span>
+                            <span id="auto-tab-bot-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Activo</span>
+                        </div>
+                    </div>
+
+                    <!-- Historial de Señales Automáticas -->
+                    <div class="bg-darkcard border border-gray-800 rounded-xl p-6 shadow-xl">
+                        <div class="flex items-center justify-between border-b border-gray-800 pb-4 mb-6">
+                            <h2 class="text-lg font-semibold text-gray-200 flex items-center">
+                                <svg class="h-5 w-5 mr-2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Historial de Señales Automáticas
+                            </h2>
+                            <div class="flex items-center space-x-3 flex-wrap gap-2">
+                                <label class="inline-flex items-center space-x-1.5 text-xs font-semibold text-emerald-400 cursor-pointer bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 hover:bg-emerald-500/20 transition">
+                                    <input type="checkbox" id="filter-open-only" onchange="applyMarketStatusFilter()" class="rounded border-gray-700 bg-darkbg text-emerald-500 focus:ring-emerald-500">
+                                    <span>🟢 Solo mostrar mercados ABIERTOS</span>
+                                </label>
+                                <select id="signal-mode-filter" onchange="loadSignals()" class="bg-darkbg border border-gray-800 rounded-lg px-2.5 py-1 text-xs font-medium text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                    <option value="ACTIVE">🎯 Filtrar por Modo Activo</option>
+                                    <option value="ALL">🛡️⚡ Todos los Modos</option>
+                                    <option value="SAFE">🛡️ Solo Modo Seguro</option>
+                                    <option value="AGGRESSIVE">⚡ Solo Modo Agresivo</option>
+                                </select>
+                                <select id="signal-symbol-filter" onchange="loadSignals()" class="bg-darkbg border border-gray-800 rounded-lg px-2.5 py-1 text-xs font-medium text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                    <option value="ALL">🌐 Todos los Activos</option>
+                                    <optgroup label="💱 Forex">
+                                        <option value="EUR/USD">EUR/USD</option>
+                                        <option value="GBP/USD">GBP/USD</option>
+                                        <option value="USD/JPY">USD/JPY</option>
+                                        <option value="AUD/USD">AUD/USD</option>
+                                        <option value="USD/CAD">USD/CAD</option>
+                                    </optgroup>
+                                    <optgroup label="📈 Acciones">
+                                        <option value="AAPL">AAPL (Apple)</option>
+                                        <option value="TSLA">TSLA (Tesla)</option>
+                                        <option value="NVDA">NVDA (Nvidia)</option>
+                                        <option value="MSFT">MSFT (Microsoft)</option>
+                                        <option value="AMZN">AMZN (Amazon)</option>
+                                    </optgroup>
+                                    <optgroup label="🥇 Metales Preciosos">
+                                        <option value="XAU/USD">XAU/USD (Oro)</option>
+                                        <option value="XAG/USD">XAG/USD (Plata)</option>
+                                    </optgroup>
+                                    <optgroup label="₿ Criptomonedas (24/7)">
+                                        <option value="BTC/USD">BTC/USD (Bitcoin)</option>
+                                        <option value="ETH/USD">ETH/USD (Ethereum)</option>
+                                        <option value="SOL/USD">SOL/USD (Solana)</option>
+                                        <option value="XRP/USD">XRP/USD (Ripple)</option>
+                                        <option value="ADA/USD">ADA/USD (Cardano)</option>
+                                    </optgroup>
+                                </select>
+                                <button onclick="clearSignals()" class="text-xs font-medium text-red-400 hover:text-red-300 flex items-center space-x-1 border border-red-500/20 px-2 py-1 rounded bg-red-500/5 hover:bg-red-500/10 transition">
+                                    <svg class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    <span>Limpiar Historial</span>
+                                </button>
+                                <button onclick="simulateSignal()" class="text-xs font-medium text-purple-400 hover:text-purple-300 flex items-center space-x-1 border border-purple-500/20 px-2 py-1 rounded bg-purple-500/5 hover:bg-purple-500/10 transition">
+                                    <svg class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span>🔮 Simular Señal</span>
+                                </button>
+                                <button onclick="loadSignals()" class="text-xs font-medium text-indigo-400 hover:text-indigo-300 flex items-center space-x-1 border border-indigo-500/20 px-2 py-1 rounded bg-indigo-500/5 hover:bg-indigo-500/10 transition">
+                                    <svg class="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5M4 8h5.182" />
+                                    </svg>
+                                    <span>🔄 Refrescar</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Listado dinámico de señales -->
+                        <div id="signals-container" class="space-y-4 max-h-[600px] overflow-y-auto pr-1">
+                            <div class="text-center py-8 text-gray-500">No hay señales registradas aún.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PESTAÑA 2: ESCÁNER MANUAL -->
+                <div id="tab-content-manual" class="space-y-6 hidden">
+                    <!-- Card: Gatillar Análisis Manual -->
+                    <div class="bg-darkcard border border-gray-800 rounded-xl p-6 shadow-xl">
+                        <h2 class="text-lg font-semibold mb-4 text-gray-200 border-b border-gray-800 pb-2 flex items-center">
+                            <svg class="h-5 w-5 mr-2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            Escáner Manual Bajo Demanda
+                        </h2>
+                        
+                        <div class="flex flex-col md:flex-row md:items-end gap-4">
+                            <div class="flex-1">
+                                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Activo Financiero</label>
+                                <select id="analysis-symbol" class="bg-darkbg border border-gray-800 rounded-lg w-full px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                    <optgroup label="💱 Forex (Mercado de Divisas)">
+                                        <option value="EUR/USD">EUR/USD</option>
+                                        <option value="GBP/USD">GBP/USD</option>
+                                        <option value="USD/JPY">USD/JPY</option>
+                                        <option value="AUD/USD">AUD/USD</option>
+                                        <option value="USD/CAD">USD/CAD</option>
+                                    </optgroup>
+                                    <optgroup label="📈 Acciones (Stock Market US)">
+                                        <option value="AAPL">AAPL (Apple Inc.)</option>
+                                        <option value="TSLA">TSLA (Tesla Motors)</option>
+                                        <option value="NVDA">NVDA (NVIDIA Corp)</option>
+                                        <option value="MSFT">MSFT (Microsoft Corp)</option>
+                                        <option value="AMZN">AMZN (Amazon.com)</option>
+                                    </optgroup>
+                                    <optgroup label="🥇 Metales Preciosos">
+                                        <option value="XAU/USD">XAU/USD (Oro)</option>
+                                        <option value="XAG/USD">XAG/USD (Plata)</option>
+                                    </optgroup>
+                                    <optgroup label="₿ Criptomonedas (Operación 24/7)">
+                                        <option value="BTC/USD">BTC/USD (Bitcoin)</option>
+                                        <option value="ETH/USD">ETH/USD (Ethereum)</option>
+                                        <option value="SOL/USD">SOL/USD (Solana)</option>
+                                        <option value="XRP/USD">XRP/USD (Ripple)</option>
+                                        <option value="ADA/USD">ADA/USD (Cardano)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Temporalidad</label>
+                                <select id="analysis-timeframe" class="bg-darkbg border border-gray-800 rounded-lg w-full px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                    <option value="15m">15 Minutos (15m)</option>
+                                    <option value="1h">1 Hora (1h)</option>
+                                    <option value="4h">4 Horas (4h)</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center h-10 px-1">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="send-telegram-alert" class="sr-only peer">
+                                    <div class="relative w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                    <span class="ms-3 text-sm text-gray-300">Notificar Telegram</span>
+                                </label>
+                            </div>
+                            <div>
+                                <button onclick="runManualAnalysis()" id="btn-run-analysis" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200 flex items-center justify-center space-x-2 w-full md:w-auto h-10">
+                                    <span id="btn-text">Analizar Ahora</span>
+                                    <svg id="spinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Panel de Resultados del Análisis Manual -->
+                        <div id="analysis-result-panel" class="mt-6 p-5 bg-darkbg border border-gray-800 rounded-xl hidden">
+                            <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+                                <span class="text-sm font-semibold uppercase tracking-wider text-gray-400">Radiografía Técnica en Tiempo Real</span>
+                                <span id="result-signal-badge" class="px-3 py-1 rounded-full text-xs font-bold uppercase"></span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+                                <div class="bg-darkcard/50 p-3 rounded-lg border border-gray-800/50">
+                                    <div class="text-xs text-gray-500 font-semibold mb-0.5">PRECIO ACTUAL</div>
+                                    <div id="res-price" class="text-lg font-mono font-bold text-gray-200">-</div>
+                                </div>
+                                <div class="bg-darkcard/50 p-3 rounded-lg border border-gray-800/50">
+                                    <div class="text-xs text-gray-500 font-semibold mb-0.5">RSI (14)</div>
+                                    <div id="res-rsi" class="text-lg font-mono font-bold text-gray-200">-</div>
+                                </div>
+                                <div class="bg-darkcard/50 p-3 rounded-lg border border-gray-800/50">
+                                    <div class="text-xs text-gray-500 font-semibold mb-0.5">EMA 50 / 200</div>
+                                    <div id="res-ema" class="text-xs font-mono text-gray-200 truncate">-</div>
+                                </div>
+                                <div class="bg-darkcard/50 p-3 rounded-lg border border-gray-800/50">
+                                    <div class="text-xs text-gray-500 font-semibold mb-0.5">ATR (VOLATILIDAD)</div>
+                                    <div id="res-atr" class="text-lg font-mono font-bold text-gray-200">-</div>
+                                </div>
+                            </div>
+
+                            <div class="text-sm space-y-2 text-gray-300">
+                                <div><strong>Justificación Técnica:</strong> <span id="res-justification">-</span></div>
+                                <div id="res-ia-section" class="hidden border-t border-gray-800/80 pt-3 mt-3">
+                                    <strong>Análisis IA:</strong>
+                                    <div id="res-ia" class="mt-2 text-gray-400 leading-relaxed bg-darkcard p-3 rounded-lg border border-gray-800 font-normal italic"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="bg-darkcard border-t border-gray-800 mt-12 py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500">
+            &copy; 2026 TradingAssistant. Proyecto MVP de código determinista + IA.
+        </div>
+    </footer>
+
+    <!-- Lógica del Frontend -->
+    <script>
+        const API_URL = ''; // En el mismo puerto/dominio
+        let botEnabled = true;
+        let currentRiskMode = 0; // 0 = Safe, 1 = Aggressive
+
+        let marketStatusList = [];
+
+        // Al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            loadSignals();
+            fetchMarketStatus();
+            
+            // Auto refrescar cada 30 segundos
+            setInterval(() => {
+                loadSignals();
+                fetchMarketStatus();
+            }, 30000);
+        });
+
+        async function fetchMarketStatus() {
+            try {
+                const res = await fetch(`${API_URL}/api/trading/market-status`);
+                if (res.ok) {
+                    marketStatusList = await res.json();
+                    applyMarketStatusFilter();
+                }
+            } catch (err) {
+                console.error("Error al consultar estado de mercados:", err);
+            }
+        }
+
+        function applyMarketStatusFilter() {
+            const openOnly = document.getElementById('filter-open-only')?.checked || false;
+            const statusMap = {};
+            marketStatusList.forEach(m => statusMap[m.symbol] = m.isOpen);
+
+            // Actualizar selector de análisis manual
+            const analysisSelect = document.getElementById('analysis-symbol');
+            if (analysisSelect) {
+                Array.from(analysisSelect.options).forEach(opt => {
+                    const sym = opt.value;
+                    const isOpen = statusMap[sym];
+                    if (isOpen !== undefined) {
+                        const rawText = opt.getAttribute('data-raw-text') || opt.text.replace(/ (🟢 ABIERTO|🔴 CERRADO)/g, '');
+                        opt.setAttribute('data-raw-text', rawText);
+                        opt.text = `${rawText} ${isOpen ? '🟢 ABIERTO' : '🔴 CERRADO'}`;
+                        opt.hidden = openOnly && !isOpen;
+                    }
+                });
+            }
+
+            // Actualizar selector de filtro de historial
+            const filterSelect = document.getElementById('signal-symbol-filter');
+            if (filterSelect) {
+                Array.from(filterSelect.options).forEach(opt => {
+                    const sym = opt.value;
+                    if (sym === 'ALL') return;
+                    const isOpen = statusMap[sym];
+                    if (isOpen !== undefined) {
+                        const rawText = opt.getAttribute('data-raw-text') || opt.text.replace(/ (🟢 ABIERTO|🔴 CERRADO)/g, '');
+                        opt.setAttribute('data-raw-text', rawText);
+                        opt.text = `${rawText} ${isOpen ? '🟢 ABIERTO' : '🔴 CERRADO'}`;
+                        opt.hidden = openOnly && !isOpen;
+                    }
+                });
+            }
+        }
+
+        // Mostrar notificaciones Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            toastMsg.innerText = message;
+            toast.classList.remove('opacity-0', 'translate-y-20');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-20');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 3000);
+        }
+
+        function setRiskMode(mode) {
+            currentRiskMode = mode;
+            updateRiskModeUI();
+            saveSettings();
+            loadSignals();
+        }
+
+        function updateRiskModeUI() {
+            const btnSafe = document.getElementById('btn-mode-safe');
+            const btnAggressive = document.getElementById('btn-mode-aggressive');
+            const descText = document.getElementById('mode-desc-text');
+
+            if (currentRiskMode === 0) {
+                // Seguro Seleccionado (Azul Destacado + Hover)
+                btnSafe.className = "py-2.5 px-3 rounded-lg text-xs font-extrabold border transition duration-200 flex items-center justify-center space-x-1 border-blue-500 bg-blue-600/30 text-blue-300 shadow-md shadow-blue-500/20 ring-2 ring-blue-500/50 hover:bg-blue-600/40";
+                btnAggressive.className = "py-2.5 px-3 rounded-lg text-xs font-semibold border transition duration-200 flex items-center justify-center space-x-1 border-gray-800 bg-darkbg text-gray-400 hover:border-gray-700 hover:text-gray-200 hover:bg-gray-800/40";
+                descText.innerText = "Filtros estrictos (alta precisión, menos señales).";
+            } else {
+                // Agresivo Seleccionado (Dorado Destacado + Hover)
+                btnSafe.className = "py-2.5 px-3 rounded-lg text-xs font-semibold border transition duration-200 flex items-center justify-center space-x-1 border-gray-800 bg-darkbg text-gray-400 hover:border-gray-700 hover:text-gray-200 hover:bg-gray-800/40";
+                btnAggressive.className = "py-2.5 px-3 rounded-lg text-xs font-extrabold border transition duration-200 flex items-center justify-center space-x-1 border-amber-500 bg-amber-500/30 text-amber-300 shadow-md shadow-amber-500/20 ring-2 ring-amber-500/50 hover:bg-amber-500/40";
+                descText.innerText = "Filtros flexibles (más frecuencia de señales, mayor riesgo).";
+            }
+        }
+
+        // Cargar configuraciones de la API
+        async function loadSettings() {
+            try {
+                const res = await fetch(`${API_URL}/api/trading/settings`);
+                if (res.ok) {
+                    const settings = await res.json();
+                    document.getElementById('capital').value = settings.capital;
+                    document.getElementById('max-risk').value = settings.maxRiskPercentage;
+                    document.getElementById('telegram-chat-id').value = settings.telegramChatId;
+                    
+                    botEnabled = settings.botEnabled;
+                    currentRiskMode = settings.mode ?? 0;
+                    updateBotToggleUI();
+                    updateRiskModeUI();
+                }
+            } catch (err) {
+                console.error("Error al cargar configuraciones:", err);
+            }
+        }
+
+        // Guardar configuraciones
+        async function saveSettings(e) {
+            if (e) e.preventDefault();
+            
+            const payload = {
+                capital: parseFloat(document.getElementById('capital').value),
+                maxRiskPercentage: parseFloat(document.getElementById('max-risk').value),
+                telegramChatId: document.getElementById('telegram-chat-id').value,
+                botEnabled: botEnabled,
+                mode: currentRiskMode
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/api/trading/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    showToast("Configuraciones guardadas correctamente");
+                    loadSettings();
+                } else {
+                    showToast("Error al guardar configuraciones");
+                }
+            } catch (err) {
+                console.error("Error al guardar:", err);
+                showToast("Error de conexión");
+            }
+        }
+
+        // Encender o apagar el bot
+        function toggleBotEnabled() {
+            botEnabled = !botEnabled;
+            updateBotToggleUI();
+            saveSettings(); // Guardar de inmediato el cambio
+        }
+
+        function switchTab(tab) {
+            const btnAuto = document.getElementById('tab-btn-auto');
+            const btnManual = document.getElementById('tab-btn-manual');
+            const contentAuto = document.getElementById('tab-content-auto');
+            const contentManual = document.getElementById('tab-content-manual');
+
+            if (tab === 'auto') {
+                btnAuto.className = "flex-1 py-2.5 px-4 font-bold text-xs rounded-lg transition duration-200 flex items-center justify-center space-x-2 bg-indigo-600/30 text-indigo-300 border border-indigo-500/50 shadow-md shadow-indigo-500/10 ring-1 ring-indigo-500/30 hover:bg-indigo-600/40";
+                btnManual.className = "flex-1 py-2.5 px-4 font-bold text-xs rounded-lg transition duration-200 flex items-center justify-center space-x-2 bg-darkbg text-gray-400 border border-gray-800 hover:text-gray-200 hover:bg-gray-800/40 hover:border-gray-700";
+                contentAuto.classList.remove('hidden');
+                contentManual.classList.add('hidden');
+            } else {
+                btnManual.className = "flex-1 py-2.5 px-4 font-bold text-xs rounded-lg transition duration-200 flex items-center justify-center space-x-2 bg-indigo-600/30 text-indigo-300 border border-indigo-500/50 shadow-md shadow-indigo-500/10 ring-1 ring-indigo-500/30 hover:bg-indigo-600/40";
+                btnAuto.className = "flex-1 py-2.5 px-4 font-bold text-xs rounded-lg transition duration-200 flex items-center justify-center space-x-2 bg-darkbg text-gray-400 border border-gray-800 hover:text-gray-200 hover:bg-gray-800/40 hover:border-gray-700";
+                contentManual.classList.remove('hidden');
+                contentAuto.classList.add('hidden');
+            }
+        }
+
+        // Cambiar interfaz visual del interruptor
+        function updateBotToggleUI() {
+            const circle = document.getElementById('toggle-circle');
+            const btn = document.getElementById('btn-toggle-bot');
+            const badge = document.getElementById('bot-status-badge');
+            const autoTabBadge = document.getElementById('auto-tab-bot-badge');
+
+            if (botEnabled) {
+                btn.classList.remove('bg-gray-700');
+                btn.classList.add('bg-indigo-600');
+                circle.classList.remove('translate-x-0');
+                circle.classList.add('translate-x-5');
+                
+                badge.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20";
+                badge.innerText = "Bot Encendido";
+
+                if (autoTabBadge) {
+                    autoTabBadge.className = "px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20";
+                    autoTabBadge.innerText = "Activo";
+                }
+            } else {
+                btn.classList.remove('bg-indigo-600');
+                btn.classList.add('bg-gray-700');
+                circle.classList.remove('translate-x-5');
+                circle.classList.add('translate-x-0');
+
+                badge.className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20";
+                badge.innerText = "Bot Apagado";
+
+                if (autoTabBadge) {
+                    autoTabBadge.className = "px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20";
+                    autoTabBadge.innerText = "Pausado";
+                }
+            }
+        }
+
+        // Cargar historial de señales
+        // OrderType enum: 0=BuyMarket, 1=SellMarket, 2=BuyLimit, 3=SellLimit
+        function getOrderTypeLabel(orderType) {
+            if (orderType === 0 || orderType === 'BuyMarket') return '⚡ Market Buy (Ejecución Inmediata)';
+            if (orderType === 1 || orderType === 'SellMarket') return '⚡ Market Sell (Ejecución Inmediata)';
+            if (orderType === 2 || orderType === 'BuyLimit') return '⏳ Buy Limit (Orden Pendiente)';
+            if (orderType === 3 || orderType === 'SellLimit') return '⏳ Sell Limit (Orden Pendiente)';
+            if (orderType === 4 || orderType === 'BuyStop') return '⏳ Buy Stop (Orden Pendiente)';
+            if (orderType === 5 || orderType === 'SellStop') return '⏳ Sell Stop (Orden Pendiente)';
+            return 'Orden de Mercado';
+        }
+
+        function getOrderBadgeClass(orderType) {
+            if (orderType === 0 || orderType === 2 || orderType === 4 || orderType === 'BuyMarket' || orderType === 'BuyLimit' || orderType === 'BuyStop') {
+                return 'text-xs font-bold px-2 py-0.5 rounded border bg-blue-500/10 text-blue-300 border-blue-500/30';
+            }
+            return 'text-xs font-bold px-2 py-0.5 rounded border bg-orange-500/10 text-orange-300 border-orange-500/30';
+        }
+
+        function getMt5SymbolSuggestion(symbol) {
+            if (!symbol) return '';
+            const clean = symbol.toUpperCase();
+            switch (clean) {
+                case 'EUR/USD': return 'EURUSD (o EURUSD.m / EURUSD.ecn según bróker)';
+                case 'GBP/USD': return 'GBPUSD (o GBPUSD.m / GBPUSD.ecn)';
+                case 'USD/JPY': return 'USDJPY (o USDJPY.m)';
+                case 'AUD/USD': return 'AUDUSD';
+                case 'USD/CAD': return 'USDCAD';
+                case 'XAU/USD': return 'XAUUSD o GOLD';
+                case 'XAG/USD': return 'XAGUSD o SILVER';
+                case 'BTC/USD': return 'BTCUSD o BTCUSDT';
+                case 'ETH/USD': return 'ETHUSD o ETHUSDT';
+                case 'SOL/USD': return 'SOLUSD o SOLUSDT';
+                case 'XRP/USD': return 'XRPUSD o XRPUSDT';
+                case 'ADA/USD': return 'ADAUSD o ADAUSDT';
+                case 'AAPL':    return 'AAPL o #AAPL';
+                case 'TSLA':    return 'TSLA o #TSLA';
+                case 'NVDA':    return 'NVDA o #NVDA';
+                case 'MSFT':    return 'MSFT o #MSFT';
+                case 'AMZN':    return 'AMZN o #AMZN';
+                default:        return symbol.replace('/', '');
+            }
+        }
+
+        function getMetaTraderGuide(orderType, entryPrice) {
+            if (orderType === 0 || orderType === 'BuyMarket') {
+                return {
+                    type: '⚡ Ejecución por Mercado (Market Buy)',
+                    placement: '📍 AL PRECIO DE MERCADO (Sin escribir precio de entrada)',
+                    idea: 'En MetaTrader NO ingresas precio de entrada. Solo colocas tu SL y TP, y presionas "Comprar por Mercado".'
+                };
+            }
+            if (orderType === 1 || orderType === 'SellMarket') {
+                return {
+                    type: '⚡ Ejecución por Mercado (Market Sell)',
+                    placement: '📍 AL PRECIO DE MERCADO (Sin escribir precio de entrada)',
+                    idea: 'En MetaTrader NO ingresas precio de entrada. Solo colocas tu SL y TP, y presionas "Vender por Mercado".'
+                };
+            }
+            if (orderType === 2 || orderType === 'BuyLimit') {
+                return {
+                    type: '⏳ Buy Limit (Orden Pendiente)',
+                    placement: `⬇️ DEBAJO del precio actual (Ingresar ${entryPrice.toFixed(5)} en Precio)`,
+                    idea: 'En MetaTrader seleccionas Buy Limit, escribes la Entrada en el campo Precio, junto con tu SL y TP.'
+                };
+            }
+            if (orderType === 3 || orderType === 'SellLimit') {
+                return {
+                    type: '⏳ Sell Limit (Orden Pendiente)',
+                    placement: `⬆️ ENCIMA del precio actual (Ingresar ${entryPrice.toFixed(5)} en Precio)`,
+                    idea: 'En MetaTrader seleccionas Sell Limit, escribes la Entrada en el campo Precio, junto con tu SL y TP.'
+                };
+            }
+            if (orderType === 4 || orderType === 'BuyStop') {
+                return {
+                    type: '⏳ Buy Stop (Orden Pendiente)',
+                    placement: `⬆️ ENCIMA del precio actual (Ingresar ${entryPrice.toFixed(5)} en Precio)`,
+                    idea: 'En MetaTrader seleccionas Buy Stop, escribes la Entrada en el campo Precio, junto con tu SL y TP.'
+                };
+            }
+            if (orderType === 5 || orderType === 'SellStop') {
+                return {
+                    type: '⏳ Sell Stop (Orden Pendiente)',
+                    placement: `⬇️ DEBAJO del precio actual (Ingresar ${entryPrice.toFixed(5)} en Precio)`,
+                    idea: 'En MetaTrader seleccionas Sell Stop, escribes la Entrada en el campo Precio, junto con tu SL y TP.'
+                };
+            }
+            return {
+                type: 'Ejecución por Mercado',
+                placement: '📍 Al Precio de Mercado',
+                idea: 'Ingreso inmediato'
+            };
+        }
+
+        async function loadSignals() {
+            const container = document.getElementById('signals-container');
+            const symbolFilter = document.getElementById('signal-symbol-filter')?.value || 'ALL';
+            const modeFilter = document.getElementById('signal-mode-filter')?.value || 'ACTIVE';
+
+            try {
+                const res = await fetch(`${API_URL}/api/trading/signals?limit=50`);
+                if (res.ok) {
+                    let signals = await res.json();
+
+                    // 1. Filtrar por símbolo
+                    if (symbolFilter !== 'ALL') {
+                        signals = signals.filter(s => s.symbol === symbolFilter);
+                    }
+
+                    // 2. Filtrar por Modo (Seguro vs Agresivo)
+                    const targetMode = modeFilter === 'ACTIVE' 
+                        ? (currentRiskMode === 0 ? 'SAFE' : 'AGGRESSIVE') 
+                        : modeFilter;
+
+                    if (targetMode === 'SAFE') {
+                        signals = signals.filter(s => !(s.riskMode === 1 || s.riskMode === 'Aggressive' || (s.strategyName && s.strategyName.includes('AGRESIVO'))));
+                    } else if (targetMode === 'AGGRESSIVE') {
+                        signals = signals.filter(s => (s.riskMode === 1 || s.riskMode === 'Aggressive' || (s.strategyName && s.strategyName.includes('AGRESIVO'))));
+                    }
+
+                    if (signals.length === 0) {
+                        let filterMsg = [];
+                        if (symbolFilter !== 'ALL') filterMsg.push(symbolFilter);
+                        if (targetMode === 'SAFE') filterMsg.push('Modo Seguro');
+                        else if (targetMode === 'AGGRESSIVE') filterMsg.push('Modo Agresivo');
+                        const filterText = filterMsg.length > 0 ? ` (${filterMsg.join(' - ')})` : '';
+                        container.innerHTML = `<div class="text-center py-8 text-gray-500">No hay señales registradas${filterText} aún.</div>`;
+                        return;
+                    }
+
+                    container.innerHTML = signals.map(s => {
+                        const isBuy = s.type === 0 || s.type === 'BUY';
+                        const typeLabel = isBuy ? 'COMPRA (BUY)' : 'VENTA (SELL)';
+                        const badgeColor = isBuy ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20';
+
+                        // El backend emite fechas con sufijo 'Z' (UTC), el navegador las convierte a la hora local del usuario
+                        const dateLocal = s.createdAt ? new Date(s.createdAt).toLocaleTimeString() : '-';
+                        const winStart = s.entryWindowStart ? new Date(s.entryWindowStart).toLocaleTimeString() : '-';
+                        const winEnd = s.entryWindowEnd ? new Date(s.entryWindowEnd).toLocaleTimeString() : '-';
+
+                        // Detectar hora local y offset del usuario
+                        const tzOffsetMinutes = -new Date().getTimezoneOffset();
+                        const userOffsetHours = tzOffsetMinutes / 60;
+                        const userTzOffsetStr = `UTC${userOffsetHours >= 0 ? '+' : ''}${userOffsetHours}`;
+                        const userTimeLabel = `(Hora Local ${userTzOffsetStr})`;
+
+                        const isAggressive = s.riskMode === 1 || s.riskMode === 'Aggressive' || (s.strategyName && s.strategyName.includes('AGRESIVO'));
+                        const modeBadge = isAggressive
+                            ? `<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">⚡ Agresivo</span>`
+                            : `<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">🛡️ Seguro</span>`;
+                        
+                        const isCrypto = ['BTC/USD', 'ETH/USD', 'SOL/USD', 'XRP/USD', 'ADA/USD'].includes(s.symbol);
+                        const isMetal = ['XAU/USD', 'XAG/USD'].includes(s.symbol);
+                        const isStockAsset = s.symbol && !s.symbol.includes('/');
+
+                        let posUnit = 'Lot';
+                        let posLabel = 'Riesgo / Lotes:';
+
+                        if (isCrypto) {
+                            posUnit = s.symbol.split('/')[0];
+                            posLabel = 'Riesgo / Unidades Crypto:';
+                        } else if (isMetal) {
+                            posUnit = 'Lotes (Onzas)';
+                            posLabel = 'Riesgo / Lotes Metal:';
+                        } else if (isStockAsset) {
+                            posUnit = 'Acciones';
+                            posLabel = 'Riesgo / Acciones:';
+                        }
+                        
+                        const mtGuide = getMetaTraderGuide(s.orderType, s.entryPrice);
+
+                        const isMarketOrder = s.orderType === 0 || s.orderType === 1 || s.orderType === 'BuyMarket' || s.orderType === 'SellMarket';
+                        const entryPriceLabel = isMarketOrder ? 'Precio Ref. (Mercado):' : 'Precio Entrada (Pendiente):';
+                        const entryPriceVal = isMarketOrder 
+                            ? `<span class="font-mono font-bold block text-blue-300 text-sm">⚡ Al Mercado (${s.entryPrice.toFixed(5)})</span>`
+                            : `<span class="font-mono font-bold block text-gray-300 text-sm">${s.entryPrice.toFixed(5)}</span>`;
+
+                        return `
+                            <div class="bg-darkcard border border-gray-800 rounded-xl p-5 shadow transition hover:border-gray-700">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-gray-800/80 mb-3 gap-2">
+                                    <div class="flex items-center space-x-3 flex-wrap gap-1">
+                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border ${badgeColor}">${typeLabel}</span>
+                                        <span class="font-bold text-gray-200">${s.symbol}</span>
+                                        <span class="text-xs text-gray-500">${s.timeframe}</span>
+                                        ${s.orderType !== undefined ? `<span class="${getOrderBadgeClass(s.orderType)}">${getOrderTypeLabel(s.orderType)}</span>` : ''}
+                                        ${modeBadge}
+                                        ${s.strategyName ? `<span class="text-xs text-gray-500 italic">${s.strategyName}</span>` : ''}
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        Generada: <span class="font-mono text-gray-400">${dateLocal}</span> <span class="text-[10px] text-gray-500 font-mono">${userTzOffsetStr}</span>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-xs mb-3">
+                                    <div>
+                                        <span class="text-gray-500">${entryPriceLabel}</span>
+                                        ${entryPriceVal}
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">🛡️ Stop Loss (SL):</span>
+                                        <span class="font-mono font-bold block text-red-400 text-sm">${s.stopLoss.toFixed(5)}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">🎯 Take Profit 1:</span>
+                                        <span class="font-mono font-bold block text-green-400 text-sm">${s.takeProfit1.toFixed(5)}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">🎯 Take Profit 2:</span>
+                                        <span class="font-mono font-bold block text-green-400 text-sm">${s.takeProfit2.toFixed(5)}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">🎯 Take Profit 3:</span>
+                                        <span class="font-mono font-bold block text-green-400 text-sm">${s.takeProfit3.toFixed(5)}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-500">${posLabel}</span>
+                                        <span class="font-bold block text-gray-300 text-sm">$${s.riskAmount.toFixed(2)} USD / ${s.positionSize} ${posUnit}</span>
+                                    </div>
+                                </div>
+
+                                <!-- Cuadro de Instrucciones MetaTrader (MT4/MT5) -->
+                                <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-3.5 my-3 text-xs">
+                                    <div class="font-bold text-indigo-300 flex items-center mb-1">
+                                        <svg class="h-4 w-4 mr-1.5 text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
+                                        <span>📱 Guía de ingreso para MetaTrader (MT4 / MT5):</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 text-gray-300">
+                                        <div><span class="text-gray-400">Tipo de Orden en MT:</span> <span class="font-semibold text-white block">${mtGuide.type}</span></div>
+                                        <div><span class="text-gray-400">Ubicación en MT:</span> <span class="font-bold text-amber-300 block">${mtGuide.placement}</span></div>
+                                        <div><span class="text-gray-400">Objetivo:</span> <span class="text-gray-300 block italic">${mtGuide.idea}</span></div>
+                                    </div>
+                                    <div class="mt-2.5 pt-2 border-t border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
+                                        <span class="text-indigo-300 font-medium">🔍 Nombre para buscar en MetaTrader 5 (MT5):</span>
+                                        <span class="font-mono font-bold text-amber-300 bg-black/40 px-2.5 py-0.5 rounded border border-amber-500/30">${getMt5SymbolSuggestion(s.symbol)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-darkbg/40 p-3 rounded-lg border border-gray-800/40 text-xs mb-3 space-y-1">
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                        <span class="text-gray-500">⏰ Ventana de entrada recomendada:</span>
+                                        <span class="font-mono text-gray-300 font-medium">
+                                            ${winStart} - ${winEnd} 
+                                            <span class="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 ml-1">
+                                                ${userTimeLabel}
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="text-xs text-gray-400 space-y-2 border-t border-gray-800/55 pt-3">
+                                    <p><strong>Justificación técnica:</strong> ${s.technicalJustification}</p>
+                                    
+                                    ${s.iaExplanation ? `
+                                        <details class="group mt-2">
+                                            <summary class="text-indigo-400 hover:text-indigo-300 cursor-pointer font-semibold list-none flex items-center justify-between">
+                                                <span>Explicación de Inteligencia Artificial (IA)</span>
+                                                <span class="transition group-open:rotate-180">
+                                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                                                </span>
+                                            </summary>
+                                            <div class="mt-2 text-gray-400 bg-darkbg p-3 rounded-lg border border-gray-800 leading-relaxed whitespace-pre-line font-normal">${s.iaExplanation}</div>
+                                        </details>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (err) {
+                console.error("Error al cargar señales:", err);
+            }
+        }
+
+        // Gatillar un análisis manual
+        async function runManualAnalysis() {
+            const btn = document.getElementById('btn-run-analysis');
+            const spinner = document.getElementById('spinner');
+            const btnText = document.getElementById('btn-text');
+            const panelResult = document.getElementById('analysis-result-panel');
+
+            // Parámetros
+            const symbol = document.getElementById('analysis-symbol').value;
+            const timeframe = document.getElementById('analysis-timeframe').value;
+            const sendAlert = document.getElementById('send-telegram-alert').checked;
+
+            // Bloquear botón
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            btnText.innerText = "Analizando...";
+            panelResult.classList.add('hidden');
+
+            try {
+                const res = await fetch(`${API_URL}/api/trading/analyze?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&sendAlert=${sendAlert}&mode=${currentRiskMode}`, {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // Llenar panel de resultados
+                    document.getElementById('res-price').innerText = data.analisis.currentPrice.toFixed(5);
+                    document.getElementById('res-rsi').innerText = data.analisis.rsi.toFixed(2);
+                    document.getElementById('res-ema').innerText = `EMA50: ${data.analisis.ema50.toFixed(5)} | EMA200: ${data.analisis.ema200.toFixed(5)}`;
+                    document.getElementById('res-atr').innerText = data.analisis.atr.toFixed(5);
+                    document.getElementById('res-justification').innerText = data.justificacionTecnica;
+
+                    const badge = document.getElementById('result-signal-badge');
+                    badge.innerText = data.senalDeterminada;
+                    
+                    if (data.senalDeterminada === 'BUY') {
+                        badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20";
+                    } else if (data.senalDeterminada === 'SELL') {
+                        badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-red-500/10 text-red-400 border border-red-500/20";
+                    } else {
+                        badge.className = "px-3 py-1 rounded-full text-xs font-bold uppercase bg-gray-500/10 text-gray-400 border border-gray-500/20";
+                    }
+
+                    // IA section
+                    const iaSec = document.getElementById('res-ia-section');
+                    if (data.detallesSenal && data.detallesSenal.iaExplanation) {
+                        iaSec.classList.remove('hidden');
+                        document.getElementById('res-ia').innerText = data.detallesSenal.iaExplanation;
+                    } else {
+                        iaSec.classList.add('hidden');
+                    }
+
+                    panelResult.classList.remove('hidden');
+                    showToast("Análisis manual ejecutado con éxito");
+                    
+                    // Cargar historial de señales para ver si se registró una nueva
+                    loadSignals();
+                } else {
+                    const errMsg = await res.text();
+                    showToast(`Error al ejecutar análisis: ${errMsg}`);
+                }
+            } catch (err) {
+                console.error("Error al analizar:", err);
+                showToast("Error de conexión con el servidor");
+            } finally {
+                // Desbloquear botón
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+                btnText.innerText = "Analizar Ahora";
+            }
+        }
+
+        async function simulateSignal() {
+            try {
+                const direction = Math.random() > 0.5 ? 'BUY' : 'SELL';
+                const symbol = document.getElementById('analysis-symbol').value;
+                
+                const res = await fetch(`${API_URL}/api/trading/mock-signal?symbol=${encodeURIComponent(symbol)}&direction=${direction}`, {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    showToast(`Señal de ${direction} simulada correctamente`);
+                    loadSignals();
+                } else {
+                    showToast("Error al generar señal de prueba");
+                }
+            } catch (err) {
+                console.error("Error al simular señal:", err);
+                showToast("Error de conexión");
+            }
+        }
+
+        async function clearSignals() {
+            if (!confirm("¿Estás seguro de que deseas borrar todas las señales del historial? Esta acción no se puede deshacer.")) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/api/trading/signals/clear`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    showToast("Historial limpiado correctamente");
+                    loadSignals();
+                } else {
+                    showToast("Error al limpiar historial");
+                }
+            } catch (err) {
+                console.error("Error al limpiar:", err);
+                showToast("Error de conexión");
+            }
+        }
+    </script>
+</body>
+</html>

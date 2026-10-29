@@ -1,0 +1,43 @@
+## Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+## Build results (.NET)
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.pdb
+*.VisualState.xml
+TestResults/
+
+## Database / SQLite
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+## Flutter / Dart
+TradingAssistantApp/.dart_tool/
+TradingAssistantApp/.packages
+TradingAssistantApp/build/
+TradingAssistantApp/.flutter-plugins
+TradingAssistantApp/.flutter-plugins-dependencies
+
+## OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+## Secrets & Local configuration
+TradingAssistant.API/appsettings.json
+TradingAssistant.API/appsettings.Production.json
+TradingAssistant.API/appsettings.Local.json
+*.env
